@@ -7,6 +7,8 @@ from llayernn import *
 from sklearn.utils import Bunch
 
 
+np.random.seed(42)
+
 def map_outputs(y_vec, unique_values):
     """
     Create a label binarizer for each possible outputs, in this case with an output value of 0 to unique_values-1. In the MNIST, possible values are integer from 0 to 9.
@@ -41,8 +43,8 @@ assert(X_train.shape == (784, 60000))
 assert(Y_train.shape == (10, 60000))
 
 # Launch the neural network algorithm.
-parameters, performance_data = nn_model(X_train, Y_train, [(300, 'relu'), (200, 'relu'), [75, 'relu']],
-                                        n_iterations=1000, learning_rate=0.2, X_test=X_test, Y_test=Y_test)
+parameters, performance_data = nn_model(X_train, Y_train, [(50, 'relu'), (30, 'relu'), [20, 'relu']],
+                                        n_iterations=100, learning_rate=0.2, X_test=X_test, Y_test=Y_test, backprop_check=5)
 
 # Save the weights and biases, and the performance output.
 np.save("data/parameters", parameters)
