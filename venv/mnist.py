@@ -37,14 +37,14 @@ logger.info('Dataset loaded...')
 
 # Load the data to a numpy array, and split the training and test data.
 X, y = mnist["data"].to_numpy().astype(np.single), mnist["target"].to_numpy().astype(np.uint8)
-X_train, X_test, Y_train, Y_test = X[:60000].T, X[60000:].T, map_outputs(y[:60000], 10), map_outputs(y[60000:], 10)
+X_train, X_test, Y_train, Y_test = X[:60000].T/255.0, X[60000:].T/255.0, map_outputs(y[:60000], 10), map_outputs(y[60000:], 10)
 
 assert(X_train.shape == (784, 60000))
 assert(Y_train.shape == (10, 60000))
 
 # Launch the neural network algorithm.
-parameters, performance_data = nn_model(X_train, Y_train, [(50, 'relu'), (30, 'relu'), [20, 'relu']],
-                                        n_iterations=100, learning_rate=0.2, X_test=X_test, Y_test=Y_test, backprop_check=5)
+parameters, performance_data = nn_model(X_train, Y_train, [(300, 'relu'), (200, 'relu'), [50, 'relu'], [25, 'relu']],
+                                        n_iterations=50, learning_rate=5, X_test=X_test, Y_test=Y_test, minibatch_sz=32)
 
 # Save the weights and biases, and the performance output.
 np.save("data/parameters", parameters)

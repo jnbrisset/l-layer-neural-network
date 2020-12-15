@@ -284,7 +284,35 @@ def gradient_check(parameters, X, Y, layers, epsilon = 1e-7, nb_of_samples = 5):
     return difference
 
 
-def nn_model(X, Y, hidden_layers, n_iterations=20, learning_rate=0.1, X_test=None, Y_test=None, backprop_check=-1):
+def minibatch_initialization(X, Y, minibatch_sz):
+    if minibatch_sz == None:
+        return np.array([X]), np.array([Y])
+
+    permuted_idx = np.random.permutation(list(range(X.shape[1])))
+    X_permuted = np.array([X[:,idx] for idx in permuted_idx]).T
+    Y_permuted = np.array([Y[:, idx] for idx in permuted_idx]).T
+
+    assert(X.shape == X_permuted.shape and Y.shape == Y_permuted.shape)
+
+    nb_of_minibatch = X.shape[1] // minibatch_sz
+    X_minibatch, Y_minibatch = [], []
+
+    for idx in range(nb_of_minibatch):
+        X_minibatch.append(X_permuted[:, idx*minibatch_sz:(idx+1)*minibatch_sz])
+        Y_minibatch.append(Y_permuted[:, idx * minibatch_sz:(idx + 1) * minibatch_sz])
+
+    X_minibatch.append(X_permuted[:, -X.shape[1]%minibatch_sz:])
+    Y_minibatch.append(Y_permuted[:, -X.shape[1] % minibatch_sz:])
+
+    #assert(X_minibatch.shape == (nb_of_minibatch+1, X.shape[0], minibatch_sz))
+
+    #logger.debug(X_minibatch.shape)
+
+    return X_minibatch, Y_minibatch
+
+
+def nn_model(X_train, Y_train, hidden_layers, n_iterations=20, learning_rate=0.1, X_test=None, Y_test=None, backprop_check=-1,
+             minibatch_sz = None):
     """
     L-layer neural network for multioutput classification, gradient-descent optimized using cross-entropy loss function.
     :param X: Input matrix with each instance as a column (n_x x m).
@@ -296,7 +324,7 @@ def nn_model(X, Y, hidden_layers, n_iterations=20, learning_rate=0.1, X_test=Non
     :param Y_test: Output matrix of the test dataset.
     :return: Parameters of the last epoch, (Cost, Training set accuracy, validation set accuracy) for each layer.
     """
-    layers = layer_dims(X, Y, hidden_layers)
+    layers = layer_dims(X_train, Y_train, hidden_layers)
     parameters = initialize_parameters(layers)
     logger.debug(layers)
     logger.debug([(key, val.shape) for key, val in parameters.items()])
@@ -304,13 +332,17 @@ def nn_model(X, Y, hidden_layers, n_iterations=20, learning_rate=0.1, X_test=Non
         performance_array = np.array([[0.0, 0.0, 0.0]])
     else:
         performance_array = np.array([[0.0, 0.0]])
-    # TODO iterate from here
+
     for i in range(n_iterations):
-        AL, cache, cost = forward_propagation(X, Y, parameters, layers)
-        logger.info("Iteration #{}, cost function value: {}".format(i, cost))
-        grads = back_propagation(AL, Y, parameters, cache, layers)
-        update_parameters(parameters, grads, len(layers), learning_rate)
-        train_acc = accuracy_vector(Y, AL)
+        X, Y = minibatch_initialization(X_train, Y_train, minibatch_sz)
+        logger.debug([len(X), len(Y)])
+        for idx, minibatch in enumerate(X):
+            AL, cache, cost = forward_propagation(X[idx], Y[idx], parameters, layers)
+            grads = back_propagation(AL, Y[idx], parameters, cache, layers)
+            update_parameters(parameters, grads, len(layers), learning_rate)
+        AL, _, cost = forward_propagation(X_train, Y_train, parameters, layers)
+        train_acc = accuracy_vector(Y_train, AL)
+        logger.info("Epoch #{}, cost function value: {}".format(i+1, cost))
         logger.info("Training set accuracy score: {}".format(train_acc))
         if type(X_test) != None:
             AL_test, _, _ = forward_propagation(X_test, Y_test, parameters, layers)
@@ -321,5 +353,5 @@ def nn_model(X, Y, hidden_layers, n_iterations=20, learning_rate=0.1, X_test=Non
             performance_array = np.append(performance_array, [[cost, train_acc]], axis=0)
         if i==backprop_check:
             logger.info("Checking gradient... May take a while...")
-            gradient_check(parameters, X, Y, layers, epsilon=1e-5)
+            gradient_check(parameters, X_train, Y_train, layers, epsilon=1e-5)
     return parameters, performance_array
