@@ -44,7 +44,8 @@ assert(Y_train.shape == (10, 60000))
 
 # Launch the neural network algorithm.
 parameters, performance_data = nn_model(X_train, Y_train, [(300, 'relu'), (200, 'relu'), [50, 'relu'], [25, 'relu']],
-                                        n_iterations=50, learning_rate=5, X_test=X_test, Y_test=Y_test, minibatch_sz=32)
+                                        n_iterations=50, learning_rate=0.01, X_test=X_test, Y_test=Y_test, minibatch_sz=32,
+                                        optimization='adam')
 
 # Save the weights and biases, and the performance output.
 np.save("data/parameters", parameters)
